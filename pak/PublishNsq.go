@@ -7,7 +7,6 @@ import (
 	"github.com/nsqio/go-nsq"
 	"github.com/satori/go.uuid"
 	"os"
-	mq "ptq/MqCommon"
 	"sync"
 	"time"
 )
@@ -15,7 +14,7 @@ import (
 var producer *nsq.Producer
 var nsqUrl string
 
-func NsqDo(opt *mq.ConnectOpt) {
+func NsqDo(opt *ConnectOpt) {
 	nsqUrl = fmt.Sprintf("%s:%s", opt.Host, opt.Port)
 	if opt.LineCommand == true {
 		producer, _ = nsq.NewProducer(nsqUrl, nsq.NewConfig())
@@ -34,7 +33,7 @@ func NsqDo(opt *mq.ConnectOpt) {
 				if len(command) == 0 {
 					command = uuid.NewV4().String()
 				}
-				msg := mq.MessageBody{time.Now().UnixNano(), command, 0, 0}
+				msg := MessageBody{time.Now().UnixNano(), command, 0, 0}
 				sendByte, _ := json.Marshal(msg)
 
 				producer.Publish(opt.TopicName, sendByte)
@@ -69,7 +68,7 @@ func publishToNSQ(topic string, i uint64, maxNum uint64, msgText string, waitGro
 	defer waitGroup.Done()
 	prod := InitProducer(nsqUrl)
 	for cNum := uint64(0); cNum < maxNum; cNum++ {
-		msg := mq.MessageBody{Id: time.Now().UnixNano(), Body: msgText, ConnectNum: cNum, NodeNum: i}
+		msg := MessageBody{Id: time.Now().UnixNano(), Body: msgText, ConnectNum: cNum, NodeNum: i}
 		message, _ := json.Marshal(msg)
 		prod.Publish(topic, message)
 	}

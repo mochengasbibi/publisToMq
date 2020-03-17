@@ -7,14 +7,13 @@ import (
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 	uuid "github.com/satori/go.uuid"
 	"os"
-	mq "ptq/MqCommon"
 	"sync"
 	"time"
 )
 
 var mqttUrl string
 
-func MqttDo(opt *mq.ConnectOpt) {
+func MqttDo(opt *ConnectOpt) {
 	if opt.LineCommand == true {
 		client, _ := getMqttContent(opt)
 		defer client.Disconnect(250)
@@ -33,7 +32,7 @@ func MqttDo(opt *mq.ConnectOpt) {
 				if len(command) == 0 {
 					command = uuid.NewV4().String()
 				}
-				msg := mq.MessageBody{time.Now().UnixNano(), command, 0, 0}
+				msg := MessageBody{time.Now().UnixNano(), command, 0, 0}
 				sendByte, _ := json.Marshal(msg)
 				client.Publish(opt.TopicName, byte(opt.Qos), false, sendByte)
 			}
@@ -51,7 +50,7 @@ func MqttDo(opt *mq.ConnectOpt) {
 }
 
 //返回一个mqtt Client
-func getMqttContent(opt *mq.ConnectOpt) (mqtt.Client, error) {
+func getMqttContent(opt *ConnectOpt) (mqtt.Client, error) {
 	mqttUrl = fmt.Sprintf("tcp://%s:%s", opt.Host, opt.Port)
 	//设置一个调handler
 	//var messagePubHandler mqtt.MessageHandler = func(client mqtt.Client, msg mqtt.Message) {
@@ -74,12 +73,12 @@ func getMqttContent(opt *mq.ConnectOpt) (mqtt.Client, error) {
 	return client, nil
 }
 
-func mqttConnPubMsgTask(opt *mq.ConnectOpt, nodeNum uint64, waitGroup *sync.WaitGroup) {
+func mqttConnPubMsgTask(opt *ConnectOpt, nodeNum uint64, waitGroup *sync.WaitGroup) {
 	defer waitGroup.Done()
 	client, _ := getMqttContent(opt)
 	maxNum := opt.ConnectNum
 	for i := uint64(0); i < maxNum; i++ {
-		msg := mq.MessageBody{Id: time.Now().UnixNano(), Body: opt.MessageConnect, ConnectNum: i, NodeNum: nodeNum}
+		msg := MessageBody{Id: time.Now().UnixNano(), Body: opt.MessageConnect, ConnectNum: i, NodeNum: nodeNum}
 		text, _ := json.Marshal(msg)
 		token := client.Publish(opt.TopicName, byte(opt.Qos), false, text)
 		//fmt.Printf("[Pub] end publish msg to mqtt broker, taskId: %d, count: %d, token : %s \n", taskId, i, token)

@@ -5,7 +5,7 @@ import (
 	"flag"
 	"fmt"
 	uuid "github.com/satori/go.uuid"
-	mq "ptq/MqCommon"
+	mq "ptq/pak"
 	"strings"
 )
 

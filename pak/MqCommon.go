@@ -1,9 +1,6 @@
-package MqCommon
+package pak
 
-import (
-	mqDo "ptq/pak"
-	"strings"
-)
+import "strings"
 
 type MessageBody struct {
 	Id         int64  `json:id`
@@ -34,7 +31,7 @@ func (opt *ConnectOpt) Connect() {
 	} else if strings.ToUpper(opt.MqType) == "RABBIT" {
 
 	} else {
-		mqDo.NsqDo(opt)
+		NsqDo(opt)
 	}
 
 }
