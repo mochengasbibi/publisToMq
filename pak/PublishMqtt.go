@@ -6,7 +6,6 @@ import (
 	"fmt"
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 	uuid "github.com/satori/go.uuid"
-	"math/rand"
 	"os"
 	mq "ptq/MqCommon"
 	"sync"
@@ -28,6 +27,7 @@ func MqttDo(opt *mq.ConnectOpt) {
 			command := string(data)
 			if command == "stop" {
 				running = false
+				fmt.Println("^_^ 88")
 				return
 			} else {
 				if len(command) == 0 {

@@ -28,6 +28,7 @@ func NsqDo(opt *mq.ConnectOpt) {
 			command := string(data)
 			if command == "stop" {
 				running = false
+				fmt.Println("^_^ 88")
 				return
 			} else {
 				if len(command) == 0 {

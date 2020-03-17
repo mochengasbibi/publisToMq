@@ -10,7 +10,7 @@ import (
 )
 
 var host = flag.String("host", "127.0.0.1", "NSQ服务地址")
-var port = flag.String("port", "4150", "NSQ服务端口")
+var port = flag.String("port", "", "服务端口:NSQ(4501);mqtt(1883);rabbit(5672)")
 var msgText = flag.String("text", "", "uuid.string()")
 var userName = flag.String("user", "", "用户名")
 var passWord = flag.String("password", "", "密码")
@@ -51,8 +51,18 @@ func main() {
 		mqTypeStr := "NSQ"
 		if strings.ToUpper(*mqType) == "RABBIT" {
 			mqTypeStr = "RABBIT"
+			if *port == "" {
+				*port = "5672"
+			}
 		} else if strings.ToUpper(*mqType) == "MQTT" {
 			mqTypeStr = "MQTT"
+			if *port == "" {
+				*port = "1883"
+			}
+		} else {
+			if *port == "" {
+				*port = "4501"
+			}
 		}
 		url := fmt.Sprintf("%s:%s", *host, *port)
 		opt := mq.ConnectOpt{
