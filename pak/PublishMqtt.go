@@ -1,27 +1,89 @@
 package pak
 
 import (
+	"bufio"
+	"encoding/json"
+	"fmt"
 	mqtt "github.com/eclipse/paho.mqtt.golang"
+	uuid "github.com/satori/go.uuid"
+	"math/rand"
+	"os"
+	mq "ptq/MqCommon"
+	"sync"
 	"time"
 )
 
-//返回一个mqtt Client
-func getMqttContent(opt *ConnectOpt) (*mqtt.Client, error) {
-	taskId := 0
-	//设置一个调handler
-	var messagePubHandler mqtt.MessageHandler = func(client mqtt.Client, msg mqtt.Message) {
-		fmt.Printf("Pub Client Topic : %s \n", msg.Topic())
-		fmt.Printf("Pub Client msg : %s \n", msg.Payload())
+var mqttUrl string
+
+func MqttDo(opt *mq.ConnectOpt) {
+	if opt.LineCommand == true {
+		client, _ := getMqttContent(opt)
+		defer client.Disconnect(250)
+		running := true
+		//读取控制台输入
+		reader := bufio.NewReader(os.Stdin)
+		for running {
+
+			data, _, _ := reader.ReadLine()
+			command := string(data)
+			if command == "stop" {
+				running = false
+				return
+			} else {
+				if len(command) == 0 {
+					command = uuid.NewV4().String()
+				}
+				msg := mq.MessageBody{time.Now().UnixNano(), command, 0, 0}
+				sendByte, _ := json.Marshal(msg)
+				client.Publish(opt.TopicName, byte(opt.Qos), false, sendByte)
+			}
+
+		}
+	} else {
+		waitGroup := sync.WaitGroup{}
+		for i := uint64(0); i < opt.ClientNum; i++ {
+			waitGroup.Add(1)
+			go mqttConnPubMsgTask(opt, i, &waitGroup)
+		}
+		waitGroup.Wait()
+		return
 	}
+}
+
+//返回一个mqtt Client
+func getMqttContent(opt *mq.ConnectOpt) (mqtt.Client, error) {
+	mqttUrl = fmt.Sprintf("tcp://%s:%s", opt.Host, opt.Port)
+	//设置一个调handler
+	//var messagePubHandler mqtt.MessageHandler = func(client mqtt.Client, msg mqtt.Message) {
+	//
+	//}
 	//设置连接参数
-	clinetOptions := mqtt.NewClientOptions().AddBroker("tcp://127.0.0.1:1883").SetUsername("pub").SetPassword("pub")
+	clinetOptions := mqtt.NewClientOptions()
+	//设置 用户名 密码
+	if opt.UserName != "" && opt.PassWord != "" {
+		clinetOptions.SetUsername(opt.UserName).SetPassword(opt.PassWord)
+	}
 	//设置客户端ID
-	clinetOptions.SetClientID(fmt.Sprintf("go Publish client example： %d-%d", taskId, time.Now().Unix()))
+	clinetOptions.SetClientID(uuid.NewV4().String())
 	//设置handler
-	clinetOptions.SetDefaultPublishHandler(messagePubHandler)
+	//clinetOptions.SetDefaultPublishHandler(messagePubHandler)
 	//设置连接超时
 	clinetOptions.SetConnectTimeout(time.Duration(60) * time.Second)
 	//创建客户端连接
 	client := mqtt.NewClient(clinetOptions)
-	return &client, nil
+	return client, nil
+}
+
+func mqttConnPubMsgTask(opt *mq.ConnectOpt, nodeNum uint64, waitGroup *sync.WaitGroup) {
+	defer waitGroup.Done()
+	client, _ := getMqttContent(opt)
+	maxNum := opt.ConnectNum
+	for i := uint64(0); i < maxNum; i++ {
+		msg := mq.MessageBody{Id: time.Now().UnixNano(), Body: opt.MessageConnect, ConnectNum: i, NodeNum: nodeNum}
+		text, _ := json.Marshal(msg)
+		token := client.Publish(opt.TopicName, byte(opt.Qos), false, text)
+		//fmt.Printf("[Pub] end publish msg to mqtt broker, taskId: %d, count: %d, token : %s \n", taskId, i, token)
+		token.Wait()
+	}
+	client.Disconnect(250)
 }

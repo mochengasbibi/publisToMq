@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/nsqio/go-nsq"
+	"github.com/satori/go.uuid"
 	"os"
 	mq "ptq/MqCommon"
 	"sync"
@@ -30,7 +31,7 @@ func NsqDo(opt *mq.ConnectOpt) {
 				return
 			} else {
 				if len(command) == 0 {
-					command = opt.MessageConnect
+					command = uuid.NewV4().String()
 				}
 				msg := mq.MessageBody{time.Now().UnixNano(), command, 0, 0}
 				sendByte, _ := json.Marshal(msg)
@@ -43,7 +44,7 @@ func NsqDo(opt *mq.ConnectOpt) {
 		waitGroup := sync.WaitGroup{}
 		for i := uint64(0); i < opt.ClientNum; i++ {
 			waitGroup.Add(1)
-			go PublishToNSQ(opt.TopicName, i, &waitGroup)
+			go publishToNSQ(opt.TopicName, i, opt.ConnectNum, opt.MessageConnect, &waitGroup)
 		}
 		waitGroup.Wait()
 		return
@@ -63,11 +64,11 @@ func InitProducer(str string) nsq.Producer {
 }
 
 //发布消息
-func PublishToNSQ(topic string, i uint64, waitGroup *sync.WaitGroup) {
+func publishToNSQ(topic string, i uint64, maxNum uint64, msgText string, waitGroup *sync.WaitGroup) {
 	defer waitGroup.Done()
 	prod := InitProducer(nsqUrl)
-	for cNum := uint64(0); cNum < *connectNum; cNum++ {
-		msg := mq.MessageBody{Id: time.Now().UnixNano(), Body: *msgText, ConnectNum: cNum, NodeNum: i}
+	for cNum := uint64(0); cNum < maxNum; cNum++ {
+		msg := mq.MessageBody{Id: time.Now().UnixNano(), Body: msgText, ConnectNum: cNum, NodeNum: i}
 		message, _ := json.Marshal(msg)
 		prod.Publish(topic, message)
 	}
